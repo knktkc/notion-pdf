@@ -29,7 +29,9 @@ zip -r "$OUTPUT" "$PROJECT_NAME/" \
   -x "$PROJECT_NAME/.git/*" \
   -x "$PROJECT_NAME/.claude/*" \
   -x "$PROJECT_NAME/node_modules/*" \
-  -x "$PROJECT_NAME/scripts/node_modules/*" \
+  -x "$PROJECT_NAME/scripts/package-lock.json" \
+  -x "$PROJECT_NAME/test-output/*" \
+  -x "$PROJECT_NAME/samples/*"
   -x "$PROJECT_NAME/scripts/package-lock.json" \
   -x "$PROJECT_NAME/test-output/*"
 
