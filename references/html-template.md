@@ -18,13 +18,58 @@
     margin: 0;
   }
   .markdown-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP",
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "Noto Sans CJK JP", "Noto Sans JP", "Hiragino Sans",
                  Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     padding: 32px;
     max-width: none;
   }
   .markdown-body img {
     max-width: 100%;
+  }
+  /* --- Primer CSS 変数のフォールバック ---
+     Primer CSS はテーマ変数に依存しており、環境によっては
+     変数が未定義になる。以下で明示的な値をフォールバックとして定義する。 */
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  .markdown-body table th,
+  .markdown-body table td {
+    border: 1px solid #d0d7de;
+    padding: 6px 13px;
+  }
+  .markdown-body table th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+  }
+  .markdown-body table tr {
+    background-color: #ffffff;
+    border-top: 1px solid #d8dee4;
+  }
+  .markdown-body table tr:nth-child(2n) {
+    background-color: #f6f8fa;
+  }
+  .markdown-body blockquote {
+    border-left: .25em solid #d0d7de;
+    color: #656d76;
+  }
+  .markdown-body h1,
+  .markdown-body h2 {
+    border-bottom: 1px solid #d8dee4;
+  }
+  .markdown-body h6 {
+    color: #656d76;
+  }
+  .markdown-body hr {
+    border-bottom: 1px solid #d0d7de;
+  }
+  .markdown-body code,
+  .markdown-body tt {
+    background-color: rgba(175,184,193,0.2);
+  }
+  .markdown-body pre {
+    background-color: #f6f8fa;
   }
   .markdown-body details[open] {
     background-color: var(--bgColor-muted, #f6f8fa);
@@ -57,6 +102,7 @@
 <article class="markdown-body">
 <!-- 変換したHTML本文 -->
 </article>
+<!-- mermaid コードブロックがある場合のみ以下を挿入 -->
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
@@ -69,7 +115,9 @@ mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
 
 - **`data-color-mode="light" data-light-theme="light"`**: Primer CSSのテーマ変数（`--borderColor-default` 等）を有効化する属性。これがないとテーブルのボーダーが透明になる
 - **`primer.css`（フルバンドル）**: `markdown.css` 単体ではCSS変数の定義が含まれないため、フルバンドルを使う
-- **mermaid.js**: コードブロック内のmermaid記法を図としてレンダリングする。CDNから読み込み、Puppeteerのレンダリング待機と組み合わせて動作する
+- **mermaid.js**: コードブロック内のmermaid記法を図としてレンダリングする。CDNから読み込み、Puppeteerのレンダリング待機と組み合わせて動作する。**ページに mermaid コードブロックがない場合はスクリプトタグを省略する**（CDN 非対応環境でのタイムアウト防止）
+- **CDN フォールバック**: `html-to-pdf.mjs` は、ローカルの `node_modules` に `@primer/css` や `mermaid` があれば CDN URL を自動的にローカルパスに置換する。CDN にアクセスできない環境（Claude Desktop 等）でも動作する
+- **CSS 変数フォールバック**: Primer CSS の多くのスタイル（テーブルボーダー、blockquote、見出し下線、コードブロック背景等）はテーマ CSS 変数に依存しており、環境によっては変数が未定義で透明になる。`<style>` ブロック内で明示的な色値をフォールバックとして定義している
 - **`details[open]` スタイル**: Primer CSSにはdetails要素のスタイルが定義されていないため、展開状態のトグルに薄いグレー背景を付けて範囲を明確にする補完スタイル
 
 ## Markdown → HTML 変換ルール

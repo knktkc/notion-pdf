@@ -11,6 +11,7 @@ NotionページをスタイリングされたPDFに変換する。
 
 - Notion MCP（`mcp__claude_ai_Notion`）が接続されていること
 - Node.js がインストールされていること
+- Chrome/Chromium が環境にあること（自動検出される）
 
 ## ワークフロー
 
@@ -40,21 +41,34 @@ NotionページをスタイリングされたPDFに変換する。
 
 HTMLテンプレートと変換ルールは `references/html-template.md` を参照。Primer CSSのテーマ変数を有効にするため `data-color-mode="light"` 属性が必須。これがないとテーブルのボーダー等のCSS変数が未定義になり、表示が崩れる。
 
+**mermaid スクリプトの条件付き挿入**: ページに mermaid コードブロックが含まれない場合は、mermaid の `<script>` タグを省略する。CDN にアクセスできない環境でのタイムアウトを防ぐため。
+
 生成したHTMLを作業ディレクトリに保存する。ファイル名はページタイトルをベースにする（例: `my-page.html`）。
 
 ### ステップ5: PDF変換
 
-スキルディレクトリ内の `scripts/html-to-pdf.mjs` を使用する。PuppeteerでHTMLを開き、CDNのCSS読み込みとmermaid図のレンダリングを待ってからPDF化するスクリプト。
+スキルディレクトリの `scripts/html-to-pdf.mjs` を使用する。puppeteer-core で HTML を開き、CSS の読み込みと mermaid 図のレンダリングを待ってから PDF 化するスクリプト。
+
+Chrome/Chromium バイナリは環境から自動検出される（`CHROME_PATH` 環境変数でも指定可能）。HTML 内の CDN URL（Primer CSS、mermaid.js）は、`scripts/vendor/` または `scripts/node_modules/` にローカルファイルがあれば自動的にローカルパスに置換される（Primer CSS は `vendor/primer.css` に同梱済み）。
+
+スキルディレクトリは `${CLAUDE_SKILL_DIR}` で参照できる。
 
 ```bash
-# 依存パッケージのインストール（初回のみ）
-npm install --prefix <skill-dir>/scripts puppeteer
-
 # PDF生成
-node <skill-dir>/scripts/html-to-pdf.mjs <input.html> <output.pdf>
+node ${CLAUDE_SKILL_DIR}/scripts/html-to-pdf.mjs <input.html> <output.pdf>
 ```
 
-`file://` URLでHTMLを開く方式を使っている。`page.setContent()` ではCDNのCSSが読み込まれないため、必ず `page.goto()` で開くこと。
+node_modules が存在しない場合は依存パッケージをインストールする:
+```bash
+npm install --prefix ${CLAUDE_SKILL_DIR}/scripts
+```
+
+スキルディレクトリが読み取り専用の場合（Claude Desktop 等）は、scripts を作業ディレクトリにコピーしてから実行する:
+```bash
+cp -r ${CLAUDE_SKILL_DIR}/scripts ./notion-pdf-scripts
+npm install --prefix ./notion-pdf-scripts
+node ./notion-pdf-scripts/html-to-pdf.mjs <input.html> <output.pdf>
+```
 
 ### ステップ6: 完了
 
@@ -76,5 +90,6 @@ node <skill-dir>/scripts/html-to-pdf.mjs <input.html> <output.pdf>
 
 - **Notion MCPが未接続**: 接続設定を確認するよう案内する
 - **ページが見つからない**: URLの再確認を促す
-- **puppeteer未インストール**: `npm install puppeteer` の実行を提案する
+- **puppeteer-core未インストール**: `npm install --prefix ${CLAUDE_SKILL_DIR}/scripts` の実行を提案する（読み取り専用の場合はコピーしてから）
+- **Chrome が見つからない**: `CHROME_PATH` 環境変数の設定か `chromium-browser` のインストールを提案する
 - **画像取得失敗**: Notion S3の署名付きURLは一時的で期限切れになる場合がある。画像なしで続行し、取得できなかった画像を報告する
