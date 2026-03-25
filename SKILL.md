@@ -43,6 +43,8 @@ HTMLテンプレートと変換ルールは `references/html-template.md` を参
 
 **mermaid スクリプトの条件付き挿入**: ページに mermaid コードブロックが含まれない場合は、mermaid の `<script>` タグを省略する。CDN にアクセスできない環境でのタイムアウトを防ぐため。
 
+**画像の取り扱い**: Markdownに含まれる画像（`![alt](url)`）は、URLがどのような形式であっても必ず `<img src="url" alt="alt">` としてHTMLに含めること。S3署名付きURLであっても省略してはならない。画像のダウンロードと埋め込みはPDF変換スクリプトが自動的に処理する。
+
 生成したHTMLを作業ディレクトリに保存する。ファイル名はページタイトルをベースにする（例: `my-page.html`）。
 
 ### ステップ5: PDF変換
@@ -92,4 +94,4 @@ node ./notion-pdf-scripts/html-to-pdf.mjs <input.html> <output.pdf>
 - **ページが見つからない**: URLの再確認を促す
 - **puppeteer-core未インストール**: `npm install --prefix ${CLAUDE_SKILL_DIR}/scripts` の実行を提案する（読み取り専用の場合はコピーしてから）
 - **Chrome が見つからない**: `CHROME_PATH` 環境変数の設定か `chromium-browser` のインストールを提案する
-- **画像取得失敗**: Notion S3の署名付きURLは一時的で期限切れになる場合がある。画像なしで続行し、取得できなかった画像を報告する
+- **画像取得失敗**: PDF変換スクリプトが画像のダウンロードに失敗した場合、その画像は空白になるがPDF生成は続行される。スクリプトのログに失敗した画像が出力されるため、それをユーザーに報告する
