@@ -89,6 +89,51 @@ function resolveLocalAssets(html) {
   return html;
 }
 
+// --- 外部画像を Base64 data URI に埋め込み ---
+
+async function embedImages(html) {
+  const imgRegex = /<img\s+[^>]*src=["'](https?:\/\/[^"']+)["'][^>]*>/gi;
+  const matches = [...html.matchAll(imgRegex)];
+  if (matches.length === 0) return html;
+
+  console.error(`Downloading ${matches.length} image(s)...`);
+
+  const results = await Promise.allSettled(
+    matches.map(async (match) => {
+      const url = match[1];
+      const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url.slice(0, 80)}...`);
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const contentType = res.headers.get('content-type') || 'image/png';
+      return {
+        original: match[0],
+        url,
+        dataUri: `data:${contentType};base64,${buffer.toString('base64')}`,
+      };
+    }),
+  );
+
+  let result = html;
+  let downloaded = 0;
+  let failed = 0;
+
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      result = result.replace(
+        r.value.original,
+        r.value.original.replace(/src=["']https?:\/\/[^"']+["']/, `src="${r.value.dataUri}"`),
+      );
+      downloaded++;
+    } else {
+      console.error(`  Warning: ${r.reason.message}`);
+      failed++;
+    }
+  }
+
+  console.error(`  ${downloaded} downloaded, ${failed} failed`);
+  return result;
+}
+
 // --- メイン処理 ---
 
 const args = process.argv.slice(2);
@@ -135,18 +180,19 @@ async function convert() {
   }
   console.error(`Using Chrome: ${chromePath}`);
 
-  // HTML を読み込み、CDN URL をローカルパスに置換
+  // HTML を読み込み、CDN URL をローカルパスに置換し、外部画像を埋め込む
   const originalHtml = readFileSync(resolvedHtmlPath, 'utf8');
   const resolvedHtml = resolveLocalAssets(originalHtml);
+  const embeddedHtml = await embedImages(resolvedHtml);
 
   let targetPath = resolvedHtmlPath;
   let tempFile = null;
 
-  if (resolvedHtml !== originalHtml) {
+  if (embeddedHtml !== originalHtml) {
     tempFile = join(dirname(resolvedHtmlPath), `.tmp-${basename(resolvedHtmlPath)}`);
-    writeFileSync(tempFile, resolvedHtml, 'utf8');
+    writeFileSync(tempFile, embeddedHtml, 'utf8');
     targetPath = tempFile;
-    console.error('CDN URLs resolved to local paths');
+    console.error('Assets resolved to local/embedded');
   }
 
   const fileUrl = `file://${targetPath}`;
